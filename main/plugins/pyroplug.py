@@ -13,7 +13,7 @@ def thumbnail(sender):
     else:
          return None
       
-async def get_msg(userbot, client:Client, sender, to, editable_msg, msg_link, caption_data, i=0, plan="basic"):
+async def get_msg(userbot, client:Client, sender, to, editable_msg, msg_link, i=0, plan="basic"):
 
     file, file_size, chat, caption, thumb_path, upload_client = None, None, None, None, thumbnail(sender), client
 
@@ -25,8 +25,9 @@ async def get_msg(userbot, client:Client, sender, to, editable_msg, msg_link, ca
     if 't.me/c/' in msg_link or 't.me/b/' in msg_link:
         if 't.me/b/' in msg_link:
             chat = str(msg_link.split("/")[-2])
-        elif 't.me/c/' in msg_link:
+        else:
             chat = int('-100' + str(msg_link.split("/")[-2]))
+
         try:
             msg = await userbot.get_messages(chat, msg_id)
             
@@ -46,10 +47,8 @@ async def get_msg(userbot, client:Client, sender, to, editable_msg, msg_link, ca
                 else:
                     if msg.video:
                         file_size = msg.video.file_size
-                    if msg.document:
-                        file_size = msg.document.file_size
                     else:
-                        file_size = 0
+                        file_size = msg.document.file_size
                     if file_size > 2097152000:
                         if plan != "pro":
                             return await editable_msg.edit("Buy pro plan and telegram premium to upload file size over 2Gb.")
@@ -70,23 +69,6 @@ async def get_msg(userbot, client:Client, sender, to, editable_msg, msg_link, ca
 
             if msg.caption is not None:
                 caption = msg.caption
-                if plan == "pro":
-                    new_caption = ""
-                    action = caption_data["action"]
-                    string = caption_data["string"]
-                    if action is not None:
-                        if action == "add":
-                            new_caption = caption + f"\n\n{string}"
-                        if action == "delete":
-                            new_caption = caption.replace(string, "")
-                        if action == "replace":
-                            new_caption = caption.replace(string["d"], string["a"])
-                        caption = new_caption
-            else:
-                if plan == "pro":
-                    action = caption_data["action"]
-                    if action == "add":
-                        caption = caption_data["string"]
 
             await editable_msg.edit("Preparing to upload...")
             
@@ -95,7 +77,7 @@ async def get_msg(userbot, client:Client, sender, to, editable_msg, msg_link, ca
                 await editable_msg.delete()
             else:
                 if not update:
-                    return await get_msg(userbot, client, sender, to, editable_msg, msg_link, caption_data, i=0, plan=plan)
+                    return await get_msg(userbot, client, sender, to, editable_msg, msg_link, i=0, plan=plan)
                 else:
                     return await editable_msg.edit(f"❌ Failed to upload: `{msg_link}`\n\nError: {update}")
                     
@@ -112,8 +94,9 @@ async def get_msg(userbot, client:Client, sender, to, editable_msg, msg_link, ca
         try:
             msg = await client.get_messages(chat, msg_id)
             if msg.empty:
-                group_link = f't.me/b/{chat}/{int(msg_id)}'
-                return await get_msg(userbot, client, sender, to, editable_msg, group_link, caption_data, i=0, plan=plan)
+                group = await userbot.get_chat(chat)
+                group_link = f't.me/c/{int(group.id)}/{int(msg_id)}'
+                return await get_msg(userbot, client, sender, to, editable_msg, group_link, i=0, plan=plan)
             else:
                 await client.copy_message(to, chat, msg_id)
         except Exception as e:
@@ -122,7 +105,3 @@ async def get_msg(userbot, client:Client, sender, to, editable_msg, msg_link, ca
         
         await editable_msg.delete()
      
-        
-async def get_bulk_msg(userbot, client, sender, to, msg_link, caption_data, i=0, plan="basic"):
-    x = await client.send_message(sender, "Processing!")
-    await get_msg(userbot, client, sender, to, x, msg_link, caption_data, i=i, plan=plan)

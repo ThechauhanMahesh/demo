@@ -6,48 +6,27 @@ from .. import bot as Drone, API_ID, API_HASH, help_text as ht, otp_text, AUTH_U
 from pyromod.exceptions import ListenerTimeout
 from pyrogram import Client, filters, types
 from pyrogram.errors import SessionPasswordNeeded, FloodWait, PhoneCodeInvalid, PhoneCodeExpired 
- 
+
 from main.plugins.helpers import login_credentials, logout_credentials
 from main.Database.database import db
 
 APIID = [API_ID, 29841594]
 APIHASH = [API_HASH, "1674d13f3308faa1479b445cdbaaad2b"]
 
-
-@Drone.on_message(filters=filters.command('free') & filters.incoming)
-async def free(_, message: types.Message):
-    user_id = message.from_user.id
-    if not (await db.get_process(user_id))["process"]:
-        return
-    if (await db.get_process(user_id))["batch"]:
-        return await message.reply("Use /cancel to stop batch.")
-    await message.reply("Done, try after 10 minutes.")
-    await asyncio.sleep(600)
-    return await db.rem_process(user_id)
-
 @Drone.on_message(filters=filters.private & filters.incoming, group=1)
 async def incomming(_, message: types.Message):
     user_id = message.from_user.id
     if not await db.is_user_exist(user_id):
         await db.add_user(user_id)
-        tag = f'[{message.from_user.first_name}](t.me/@id{user_id})'
-        await Drone.send_message(int(AUTH_USERS), f'Activate the plan of {tag}\nUserID: {user_id}') 
-        await message.reply("Purchase premium from @SubscriptionForBot.")
-    else:
-        if (await db.get_data(user_id))["dos"] == None:
-            tag = f'[{message.from_user.first_name}](t.me/@id{user_id})'
-            await Drone.send_message(int(AUTH_USERS), f'Activate the plan of {tag}\nUserID: {user_id}') 
+        await message.reply("https://t.me/Save_restricted_message/3")
 
-# @Drone.on(events.NewMessage(incoming=True, pattern="^/setchat (.*)" ))
-# async def update_chat(event):
-#     c = event.pattern_match.group(1)
-#     await db.update_chat(event.sender_id, int(c))
-#     await event.reply(f"Done.")
+@Drone.on_message(filters=filters.command('setchat') & filters.incoming)
+async def start(_, message: types.Message):
+    return await message.reply("⚠️ Only for paid users, check @DroneBOTs")
 
-# @Drone.on(events.NewMessage(incoming=True, pattern="/remchat" ))
-# async def rem_chat(event):
-#     await db.rem_chat(event.sender_id, event.sender_id)
-#     await event.reply(f"Done.")
+@Drone.on_message(filters=filters.command('remchat') & filters.incoming)
+async def start(_, message: types.Message):
+    return await message.reply("⚠️ Only for paid users, check @DroneBOTs")
 
 @Drone.on_message(filters=filters.command('start') & filters.incoming)
 async def start(_, message: types.Message):
@@ -59,10 +38,19 @@ async def login(_, message: types.Message):
     session, passcode, ai, ah= None, None, None, None
     user_id = message.from_user.id
 
+    i, h, s = await db.get_credentials(user_id)
+    if s:
+        return await message.reply("⚠️ You are already logged in.")
+
     try:
         contact = await Drone.ask(chat_id=user_id, text="Send me your contact number with country code(eg +1 or +91) to login.", filters=filters.text, timeout=60)
         number = ' '.join(str(contact.text))
-
+        if "-" in number:
+            number = '-'.join(number)
+        numbers_logged_in = await db.get_numbers()
+        if number in numbers_logged_in:
+            return await message.reply("❌ This number is already in use by another user.")
+        
         code_alert = await message.reply("Sending code...")
 
         ai = APIID[0]
@@ -130,14 +118,16 @@ async def login(_, message: types.Message):
     await login_credentials(user_id, ai, ah, session) 
     await message.reply("✅ Login credentials saved.\n\n⚠️ click on 'yes its me' when telegram asks if is it you who logged in.")
     await client.disconnect()
+    await db.update_number(user_id, number)
 
 @Drone.on_message(filters=filters.command('logout') & filters.incoming)
 async def logout(_, message: types.Message):
     edit = await message.reply("Trying to logout.")
     await logout_credentials(message.from_user.id)
+    await db.rem_number(message.from_user.id)
     await edit.edit('✅ successfully Logged out.')
 
-@Drone.on_message(filters=filters.command('logout') & filters.incoming)
+@Drone.on_message(filters=filters.command('help') & filters.incoming)
 async def help(_, message: types.Message):
     await message.reply(ht)
 
@@ -162,4 +152,4 @@ async def remthumb(_, message: types.Message):
         os.remove(f'{message.from_user.id}.jpg')
         await edit.edit('✅ Removed!')
     except Exception:
-        await edit.edit("No thumbnail was saved.")     
+        await edit.edit("No thumbnail was saved.") 

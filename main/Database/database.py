@@ -1,10 +1,10 @@
 #Tg:ChauhanMahesh/DroneBots
 #Github.com/vasusen-code
-import datetime
+import datetime, pymongo
 import motor.motor_asyncio
 from .. import MONGODB_URI
 
-SESSION_NAME = 'PremiumSRCB'
+SESSION_NAME = 'Demo-SRCB'
 
 class Database:
   
@@ -14,7 +14,8 @@ class Database:
         self._client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
         self.db = self._client[SESSION_NAME]
         self.col = self.db.users
-
+        self.default_id = 1807573686
+      
 #collection handling---------------------------------------------------------
 
     def new_user(self, id):
@@ -27,7 +28,10 @@ class Database:
           chat=None, 
           process={"process":False, "batch":False}, 
           data={"dos":None, "doe":None, "plan":"basic"},
-          caption={"action":None, "string":None},
+          trials=0,
+          number=None,
+          expired=[],
+          logged_in=[],
         )
            
     async def add_user(self,id):
@@ -74,7 +78,27 @@ class Database:
     
     async def rem_api_hash(self, id):
         await self.col.update_one({'id': id}, {'$set': {'api_hash': None}})
-   
+      
+    async def update_number(self, id, number):
+        default = await self.col.find_one({'id': self.default_id})
+        logged_in = default.get('logged_in', None)
+        if not number in logged_in:
+            logged_in.append(number)
+        await self.col.update_one({'id': id}, {'$set': {'number': number}})
+        await self.col.update_one({'id': self.default_id}, {'$set': {'logged_in': logged_in}})
+      
+    async def rem_number(self, id):
+        user = await self.col.find_one({'id':int(id)})
+        number = user.get('number', None)
+        default = await self.col.find_one({'id': self.default_id})
+        logged_in = default.get('logged_in', None)
+        try:
+            logged_in.remove(number)
+        except:
+            pass
+        await self.col.update_one({'id': id}, {'$set': {'number': "xyz69"}})
+        await self.col.update_one({'id': self.default_id}, {'$set': {'logged_in': logged_in}})
+      
     async def update_chat(self, id, chat):
         await self.col.update_one({'id': id}, {'$set': {'chat': chat}})
     
@@ -93,18 +117,11 @@ class Database:
     async def rem_process(self, id):
         await self.col.update_one({'id': id}, {'$set': {'process': {"process":False, "batch":False}}})
 
-    async def add_caption(self, id, string):
-        await self.col.update_one({'id': id}, {'$set': {'caption': {"action":"add", "string":string}}})
-
-    async def delete_caption(self, id, string):
-        await self.col.update_one({'id': id}, {'$set': {'caption': {"action":"delete", "string":string}}})
-
-    async def replace_caption(self, id, string):
-        await self.col.update_one({'id': id}, {'$set': {'caption': {"action":"replace", "string":string}}})
-
-    async def disable_caption(self, id):
-        await self.col.update_one({'id': id}, {'$set': {'caption': {"action":None, "string":None}}})
-      
+    async def update_trial_count(self, id):
+        user = await self.col.find_one({'id':int(id)})
+        trial = user.get('trials', None)
+        await self.col.update_one({'id': id}, {'$set': {'trials': trial+1}})
+    
     async def get_credentials(self, id):
         user = await self.col.find_one({'id':int(id)})
         i = user.get('api_id', None)
@@ -115,6 +132,10 @@ class Database:
     async def get_chat(self, id):
         user = await self.col.find_one({'id':int(id)})
         return user.get('chat', None)
+
+    async def get_trial_count(self, id):
+        user = await self.col.find_one({'id':int(id)})
+        return user.get('trials', None)
       
     async def get_data(self, id):
         user = await self.col.find_one({'id':int(id)})
@@ -124,8 +145,35 @@ class Database:
         user = await self.col.find_one({'id':int(id)})
         return user.get('process', None)
 
-    async def get_caption(self, id):
-        user = await self.col.find_one({'id':int(id)})
-        return user.get('caption', None)
+    async def get_numbers(self):
+        default = await self.col.find_one({'id': self.default_id})
+        return default.get('logged_in', None)
       
+    async def check_number(self, id):
+         user = await self.col.find_one({'id':int(id)})
+         number = user.get('number', None)
+         if number == None:
+             return True
+         default = await self.col.find_one({'id': self.default_id})
+         expired = default.get('expired', None)
+         if number in expired:
+             return False
+         else:
+             return True
+         
+    async def black_list_number(self, id):
+        user = await self.col.find_one({'id':int(id)})
+        number = user.get('number', None)
+        default = await self.col.find_one({'id': self.default_id})
+        expired = default.get('expired', None)
+        expired.append(number)
+        await self.col.update_one({'id': self.default_id}, {'$set': {'expired': expired}})
+    
 db = Database(MONGODB_URI, SESSION_NAME)
+
+_client = pymongo.MongoClient(MONGODB_URI)
+_db = _client[SESSION_NAME] 
+collection = _db["users"]  
+process = {"process":{"process":False, "batch":False}}
+collection.update_many({}, {"$set":process})
+print("All users have been set free.")
