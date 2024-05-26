@@ -117,8 +117,8 @@ async def batch(client, message: types.Message):
     
     await check_subscription(user_id)
 
-    if plan == "basic":
-        await message.reply("⚠️ Buy Monthly subscription or Pro subscription.")
+    if plan != "pro":
+        await message.reply("⚠️ This bot is only for mega users.")
         return
     
     pr = (await db.get_process(user_id))["process"]
@@ -145,13 +145,9 @@ async def batch(client, message: types.Message):
     try:
         range_ = range_.text
         value = int(range_)
-        if value > 30:
-            if not plan == "pro":
-                await message.reply("⚠️ You can only get upto 30 files in a single batch.")
-                return
-            elif value > 100:
-                await message.reply("⚠️ You can only get upto 100 files in a single batch.")
-                return 
+        if value > 1000:
+            await message.reply("⚠️ You can only get upto 1000 files in a single batch.")
+            return
     except ValueError:
         await message.reply("Range must be an integer!")
         return
@@ -173,26 +169,15 @@ async def batch(client, message: types.Message):
 async def run_batch(userbot, client, sender, chat, link, value, caption_data, plan):
     for i in range(value):
         if i < 50:
-            timer = 10
-        elif i > 25 and i < 50:
-            timer = 15
+            timer = 4
         elif i > 50 and i < 100:
-            timer = 20
+            timer = 6
         elif i > 100:
-            timer = 25
+            timer = 8
+        elif i > 500:
+            timer = 10
         if not 't.me/c/' in link and not 't.me/b/' in link:
-            timer = 5
-        if (await db.get_data(sender))["plan"] == "pro":
-            if not 't.me/c/' in link and not 't.me/b/' in link:
-                timer = 3
-            else:
-                timer = 2
-                if i > 25 and i < 50:
-                    timer = 5
-                elif i > 50 and i < 100:
-                    timer = 8
-                elif i > 100:
-                    timer = 10
+            timer = 10
         try: 
             if not (await db.get_process(sender))["process"]:
                 await client.send_message(sender, "✅ Batch completed.")

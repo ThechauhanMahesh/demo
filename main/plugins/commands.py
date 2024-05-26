@@ -146,7 +146,7 @@ async def login(_, message: types.Message):
                 code = await client.send_code(number)
                 await asyncio.sleep(1)
             except FloodWait as e:
-                await code_alert.edit(f"Can't send code, you have Floodwait of {e.x} Seconds.")
+                await code_alert.edit(f"Can't send code, you have Floodwait of {e.value} Seconds.")
                 return
             except Exception as e:
                 print(e)
