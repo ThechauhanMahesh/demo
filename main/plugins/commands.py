@@ -20,6 +20,12 @@ from main.types import ButtonRequestPeer
 APIID = [API_ID, 29841594]
 APIHASH = [API_HASH, "1674d13f3308faa1479b445cdbaaad2b"]
 
+@Drone.on_message(filters=filters.private & filters.incoming, group=1)
+async def incomming(_, message: types.Message):
+    user_id = message.from_user.id
+    if not await db.is_user_exist(user_id):
+        await db.add_user(user_id)
+        
 @Drone.on_message(filters=filters.command('tutorial') & filters.incoming)
 async def tutorial(_, message: types.Message):
     await message.reply(
@@ -47,70 +53,15 @@ async def free(_, message: types.Message):
     await asyncio.sleep(600)
     return await db.rem_process(user_id)
 
-@Drone.on_message(filters=filters.private & filters.incoming, group=1)
-async def incomming(_, message: types.Message):
-    user_id = message.from_user.id
-    if not await db.is_user_exist(user_id):
-        await db.add_user(user_id)
-        tag = f'[{message.from_user.first_name}](t.me/@id{user_id})'
-        await Drone.send_message(int(AUTH_USERS[0]), f'Activate the plan of {tag}\nUserID: {user_id}') 
-        await message.reply("Purchase premium from @SubscriptionForBot.")
-    elif (await db.get_data(user_id))["dos"] is None:
-        tag = f'[{message.from_user.first_name}](t.me/@id{user_id})'
-        await Drone.send_message(int(AUTH_USERS[0]), f'Activate the plan of {tag}\nUserID: {user_id}') 
-
 @Drone.on_message(filters=filters.command('remchat') & filters.incoming)
 async def remove_chat(_, message: types.Message):
     await db.rem_chat(message.chat.id, message.chat.id)
     await message.reply("Done.")
 
-
 @Drone.on_message(filters=filters.command('setchat') & filters.incoming)
 async def handle_set_chat(_, message: types.Message):
-    await Drone.send_message(
-        chat_id=message.chat.id,
-        text="Select a group/channel!",
-        reply_markup=ReplyKeyboardMarkup(
-            [
-                [
-                    ButtonRequestPeer(
-                          text="Channel",
-                          button_id=100,
-                          peer_type=RequestPeerTypeBroadcast(),
-                          max_quantity=1
-                   )
-                ],[
-                    ButtonRequestPeer(
-                          text="Group",
-                          button_id=101,
-                          peer_type=RequestPeerTypeChat(),
-                          max_quantity=1
-                   )
-                ]
-            ], 
-            resize_keyboard = True, 
-            one_time_keyboard = True, 
-            placeholder = "🥵🍑"
-        ),
-    )
-
-
-@Drone.on_raw_update(group=10) # set to 10 to avoid any update takeover
-async def handle_selected_peer(client, update, _, __):
-    if not isinstance(update, UpdateNewMessage): return
-    if not isinstance(update.message, MessageService) and not isinstance(getattr(update.message, 'action', None), MessageActionRequestedPeer): return
-
-    user_id = get_peer_id(update.message.peer_id)
-    selected_chat = get_peer_id(update.message.action.peers[0])
-
-    await db.update_chat(user_id, selected_chat)
-    await Drone.send_message(
-        chat_id=user_id,
-        text=f"You have selected {selected_chat}\n\nPlease add me to the selected chat and give me admin rights with permission to write messages.",
-        reply_markup=ReplyKeyboardRemove()
-    )
-
-
+    await message.reply(f'⚠️ This is a demo bot, buy plan from @DroneBots')
+    
 @Drone.on_message(filters=filters.command('start') & filters.incoming)
 async def start(_, message: types.Message):
     await message.reply("Send me **link** of any **public** channel message to clone it here 🔗, For **private** channel message, First **/login** then send any **message link** from your chat ✅.\n\n**SUPPORT:** @TeamDrone\n**DEV:** @MaheshChauhan") 
@@ -170,7 +121,7 @@ async def login(_, message: types.Message):
             await message.reply("Invalid Code, try again.")
             return
         except PhoneCodeExpired:
-            await message.reply("Code has expired, try again.")
+            await message.reply("Code has expired\n\n⚠️ Send code with space for e.g 4 5 6 7 8.")
             return
         except SessionPasswordNeeded:
             two_step = await Drone.ask(chat_id=user_id, text="Send your Two-Step Verification password.", filters=filters.text, timeout=60)

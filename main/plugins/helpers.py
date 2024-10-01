@@ -117,7 +117,7 @@ async def logout_credentials(sender):
 
 #Set timer to avoid spam
 async def set_timer(bot, sender, t):
-    await bot.send_message(sender, f'You can start a new process again after {t} seconds.')
+    await bot.send_message(sender, f'You can start a new process again after {t} seconds\n\nBuy premium from @DroneBots to avoid limits. ✅')
     await asyncio.sleep(int(t))
     await db.rem_process(sender)
 

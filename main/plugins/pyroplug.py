@@ -107,4 +107,3 @@ async def get_msg(userbot, client: Client, sender, to, editable_msg, msg_link, c
         await editable_msg.delete()
     else:
         await editable_msg.edit(f'❌ Failed to save: `{msg_link}`\n\nError: Invalid link.')
-
